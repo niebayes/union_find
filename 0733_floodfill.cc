@@ -29,7 +29,7 @@ Image floodfill(const Image& _img, int sr, int sc, int new_color) {
 
   // create an UnionFind utility instance. Initially, each cell is seen as a
   // disjoint set.
-  UnionFind uf(n_rows * n_cols, true);  // use_rank = false.
+  UnionFind uf(n_rows * n_cols, true);  // use_rank = true.
 
   // union: traverse the image and unite adjacent cells if they have the same
   // color.
@@ -42,13 +42,11 @@ Image floodfill(const Image& _img, int sr, int sc, int new_color) {
       if (i + 1 < n_cols && img[j][i + 1] == color) {
         ///@warning UnionFind maintains a one-dim array, so you have to flatten
         /// the index to linear index.
-        // uf.union_sets(i + j * n_cols, (i + 1) + j * n_cols);
-        uf.union_sets_by_rank(i + j * n_cols, (i + 1) + j * n_cols);
+        uf.union_sets(i + j * n_cols, (i + 1) + j * n_cols);
       }
       // try to unite bottom cell.
       if (j + 1 < n_rows && img[j + 1][i] == color) {
-        // uf.union_sets(i + j * n_cols, i + (j + 1) * n_cols);
-        uf.union_sets_by_rank(i + j * n_cols, i + (j + 1) * n_cols);
+        uf.union_sets(i + j * n_cols, i + (j + 1) * n_cols);
       }
     }
   }

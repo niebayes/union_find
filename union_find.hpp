@@ -8,9 +8,14 @@
 ///@ref
 /// https://github.com/labuladong/fucking-algorithm/blob/master/%E7%AE%97%E6%B3%95%E6%80%9D%E7%BB%B4%E7%B3%BB%E5%88%97/FloodFill%E7%AE%97%E6%B3%95%E8%AF%A6%E8%A7%A3%E5%8F%8A%E5%BA%94%E7%94%A8.md
 
-/// apps: 动态连通性问题：
+///@note time compleixity of various implementation of union-find.
+///@ref
+/// https://leetcode-cn.com/problems/number-of-provinces/solution/jie-zhe-ge-wen-ti-ke-pu-yi-xia-bing-cha-0unne/
+
+/// apps: 不需要给出路径的动态连通性问题：
 /// (1) 元素的分组管理
 /// (2) 最小生成树的Kruskal算法.
+/// P.S. 如需要给出路径，可以考虑使用DFS、回溯等方法。
 
 #include <cassert>    // assert
 #include <stdexcept>  // std::invalid_argument
@@ -51,7 +56,7 @@ class UnionFind {
  public:
   // ctor.
   explicit UnionFind(int n, bool use_rank = false)
-      : _n{n}, _use_rank{use_rank} {
+      : _n{n}, _n_dis_sets{n}, _use_rank{use_rank} {
     _parents.clear();
     _parents.resize(_n, 0);
     if (_use_rank) {
@@ -77,6 +82,42 @@ class UnionFind {
   ///@ref https://stackoverflow.com/a/18546273
   virtual ~UnionFind() = default;
 
+  // union interface; union two disjoint sets.
+  ///@warning union is a reserved keyword.
+  inline void union_sets(int i, int j) {
+    // if they're not in the same set, each call of union_sets will decrement
+    // _n_dis_sets by 1.
+    if (!_use_rank)
+      union_sets_without_rank(i, j);
+    else
+      union_sets_by_rank(i, j);
+  }
+
+  // find interface; check connectivity.
+  inline bool is_connected(int i, int j) {
+    if (!valid_arg(i) || !valid_arg(j))
+      throw std::invalid_argument("invalid index.");
+    if (!_use_rank)
+      return (find_rep(i) == find_rep(j));
+    else
+      return (find_rep_path_comp(i) == find_rep_path_comp(j));
+  }
+
+  inline const int& get_num_dis_sets() const { return _n_dis_sets; }
+
+ private:
+  inline bool valid_arg(int i) const {
+    if (i >= 0 && i < _n)
+      return true;
+    else
+      return false;
+  }
+
+  // initialization.
+  void init() {
+    assert(!_use_rank);
+    for (int i = 0; i < _n; ++i) _parents.at(i) = i;
+  }
 
   // find; find the representative element's index in the disjoint set that
   // contains the query element indexed with curr_idx.
@@ -97,14 +138,12 @@ class UnionFind {
     }
 
     // In short, the above logic can be compressed within one line.
-    return (_parents.at(curr_idx) == curr_idx
-                ? curr_idx
-                : find_rep(_parents.at(curr_idx)));
+    // return (_parents.at(curr_idx) == curr_idx
+    //             ? curr_idx
+    //             : find_rep(_parents.at(curr_idx)));
   }
 
-  // union; union two disjoint sets.
-  ///@warning union is a reserved keyword.
-  inline void union_sets(int i, int j) {
+  inline void union_sets_without_rank(int i, int j) {
     assert(!_use_rank);
     // find i and j's representative elements.
     // the representive element is the root a tree formed by a disjoint set.
@@ -112,20 +151,24 @@ class UnionFind {
     // union is just linking one root with the other.
     ///@warning this logic could handle the case that rep_i == rep_j.
     /// however, we choose to explicitly handle it separately.
-    if (rep_i != rep_j) _parents.at(rep_i) = rep_j;
-  }
-
-  inline bool is_connected(int i, int j) {
-    if (!valid_arg(i) || !valid_arg(j))
-      throw std::invalid_argument("invalid index.");
-    if (!_use_rank)
-      return (find_rep(i) == find_rep(j));
-    else
-      return (find_rep_path_comp(i) == find_rep_path_comp(j));
+    if (rep_i == rep_j) return;
+    _parents.at(rep_i) = rep_j;
+    --_n_dis_sets;
+    assert(_n_dis_sets > 0);
   }
 
   /// UnionFind with path compression and union-by-rank.
   ///@warning path compression and union-by-rank can be adopted separately.
+
+  void init_with_rank() {
+    assert(_use_rank);
+    for (int i = 0; i < _n; ++i) {
+      _parents.at(i) = i;
+      // initial rank is set to 0.
+      ///@warning whether set to 0 or 1 or else does not matter actually.
+      _ranks.at(i) = 0;
+    }
+  }
 
   // find_rep with path compression.
   inline int find_rep_path_comp(int curr_idx) {
@@ -144,10 +187,10 @@ class UnionFind {
     }
 
     // In short, the above logic can be compressed within one line.
-    return (_parents.at(curr_idx) == curr_idx
-                ? curr_idx
-                : (_parents.at(curr_idx) =
-                       find_rep_path_comp(_parents.at(curr_idx))));
+    // return (_parents.at(curr_idx) == curr_idx
+    //             ? curr_idx
+    //             : (_parents.at(curr_idx) =
+    //                    find_rep_path_comp(_parents.at(curr_idx))));
   }
 
   // union_sets with union-by-rank.
@@ -169,34 +212,14 @@ class UnionFind {
       if (_ranks.at(rep_i) == _ranks.at(rep_j)) _ranks.at(rep_i) += 1;
       // depth is incremented by 1.
     }
+    --_n_dis_sets;
+    assert(_n_dis_sets > 0);
   }
 
- private:
-  // initialization.
-  void init() {
-    assert(!_use_rank);
-    for (int i = 0; i < _n; ++i) _parents.at(i) = i;
-  }
+  /// data members.
 
-  void init_with_rank() {
-    assert(_use_rank);
-    for (int i = 0; i < _n; ++i) {
-      _parents.at(i) = i;
-      // initial rank is set to 0.
-      ///@warning whether set to 0 or 1 or else does not matter actually.
-      _ranks.at(i) = 0;
-    }
-  }
-
-  inline bool valid_arg(int i) {
-    if (i >= 0 && i < _n)
-      return true;
-    else
-      return false;
-  }
-
-  ///@warning _n may change if we choose to track #connected components.
-  const int _n;  // #connected components, i.e. #indie elements.
+  const int _n;     // initial #disjoint sets.
+  int _n_dis_sets;  // current #disjoint sets, i.e. connected components.
   ///! the core of UnionFind is _parents which makes a tree only with a one-dim
   /// array!
   std::vector<int> _parents;  // index: curr_idx, value: parent_idx.
