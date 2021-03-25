@@ -1,5 +1,5 @@
 # union_find
-My implemention of union-find data structure.
+C++ implemention of union-find data structure.
 ### dependency 
 google-test: `sudo apt-get install libgtest-dev`.
 ### how to 
